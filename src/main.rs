@@ -78,7 +78,7 @@ fn parse_args(args: Args) -> Result<RunOpts, String> {
     if let Some(home) = args.home {
         let localdir: PathBuf = PathBuf::from(home);
 
-        println!("Switch home to: {:?}", &localdir);
+        println!("Switch home to: {}", localdir.display());
         if let Err(err) = env::set_current_dir(localdir.as_path()) {
             return Err(format!(
                 "Bad home folder: {} -- {}",
