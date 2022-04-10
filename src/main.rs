@@ -1,8 +1,17 @@
-use std::{env, path::PathBuf};
+use std::{
+    env::{self},
+    fs,
+    path::PathBuf,
+};
 
 use clap::{Parser, Subcommand};
+use dirs::home_dir;
 use log::debug;
 use simplelog::*;
+
+use crate::config::MyToml;
+
+mod config;
 
 /// SSh Manager
 #[derive(Parser, Debug)]
@@ -43,6 +52,13 @@ impl Default for RunOpts {
     }
 }
 
+impl RunOpts {
+    fn set_debug_level(&mut self, level: LevelFilter) -> &Self {
+        self.log_level = level;
+        return self;
+    }
+}
+
 fn main() {
     let args = Args::parse();
 
@@ -56,6 +72,21 @@ fn main() {
 
     init_logger(run_opts.log_level);
     debug!("Program Start");
+
+    let file_path = config::MyToml::config_file();
+
+    let my_toml = match fs::read_to_string(file_path) {
+        Ok(content) => MyToml::parse(&content).unwrap(),
+        Err(_) => {
+            panic!("File not exists")
+        }
+    };
+    println!("Name : {}", my_toml.name);
+
+    // std::process::exit(0);
+
+    // let config_file = MyToml::parse(s)
+    debug!("Load config !");
 
     match run_opts.run_command {
         Command::CmdConfig => {
@@ -72,22 +103,18 @@ fn parse_args(args: Args) -> Result<RunOpts, String> {
     let mut run_opts: RunOpts = RunOpts::default();
 
     if args.debug {
-        run_opts.log_level = LevelFilter::Debug;
+        run_opts.set_debug_level(LevelFilter::Debug);
     }
 
-    if let Some(home) = args.home {
-        let localdir: PathBuf = PathBuf::from(home);
+    let dir = match args.home {
+        Some(custom_home) => custom_home,
+        None => home_dir().unwrap(),
+    };
 
-        println!("Switch home to: {}", localdir.display());
-        if let Err(err) = env::set_current_dir(localdir.as_path()) {
-            return Err(format!(
-                "Bad home folder: {} -- {}",
-                localdir.display(),
-                err
-            ));
-        }
+    if let Err(err) = env::set_current_dir(dir.as_path()) {
+        return Err(format!("Bad home folder: {} -- {}", dir.display(), err));
     }
-
+    debug!("Switch home to: {}", dir.display());
     return Ok(run_opts);
 }
 
