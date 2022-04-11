@@ -6,10 +6,10 @@ use std::{
 
 use clap::{Parser, Subcommand};
 use dirs::home_dir;
-use log::debug;
+use log::{debug, info};
 use simplelog::*;
 
-use crate::config::MyToml;
+use crate::config::SMConfig;
 
 mod config;
 
@@ -73,12 +73,20 @@ fn main() {
     init_logger(run_opts.log_level);
     debug!("Program Start");
 
-    let file_path = config::MyToml::config_file();
+    let file_path = config::SMConfig::config_file();
+
+    if !file_path.exists() {
+        let config = config::SMConfig::default();
+        config.create_file().unwrap();
+        info!("File not exists, create a default config");
+        std::process::exit(0);
+    }
 
     let my_toml = match fs::read_to_string(file_path) {
-        Ok(content) => MyToml::parse(&content).unwrap(),
+        Ok(content) => SMConfig::parse(&content).unwrap(),
         Err(_) => {
-            panic!("File not exists")
+            info!("File not exists, create a default config");
+            SMConfig::default()
         }
     };
     println!("Name : {}", my_toml.name);
