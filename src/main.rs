@@ -4,6 +4,7 @@ use std::{
     path::PathBuf,
 };
 
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 use dirs::home_dir;
 use log::{debug, info};
@@ -11,6 +12,7 @@ use simplelog::*;
 
 use crate::config::SMConfig;
 
+mod ask;
 mod config;
 
 /// SSh Manager
@@ -60,6 +62,8 @@ impl RunOpts {
 }
 
 fn main() {
+    ask::init();
+
     let args = Args::parse();
 
     let run_opts: RunOpts = match parse_args(args) {
@@ -82,16 +86,10 @@ fn main() {
         std::process::exit(0);
     }
 
-    let my_toml = match fs::read_to_string(file_path) {
-        Ok(content) => SMConfig::parse(&content).unwrap(),
-        Err(_) => {
-            info!("File not exists, create a default config");
-            SMConfig::default()
-        }
-    };
-    println!("Name : {}", my_toml.name);
+    // Config file exists
+    let sm_config = SMConfig::parse(fs::read_to_string(file_path).unwrap().as_str()).unwrap();
 
-    // std::process::exit(0);
+    println!("Name : {}", sm_config.connections[0].name);
 
     // let config_file = MyToml::parse(s)
     debug!("Load config !");
