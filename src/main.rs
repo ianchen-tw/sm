@@ -82,16 +82,11 @@ fn main() {
         std::process::exit(0);
     }
 
-    let my_toml = match fs::read_to_string(file_path) {
-        Ok(content) => SMConfig::parse(&content).unwrap(),
-        Err(_) => {
-            info!("File not exists, create a default config");
-            SMConfig::default()
-        }
-    };
-    println!("Name : {}", my_toml.name);
+    // Config file exists
+    let sm_config = SMConfig::parse(fs::read_to_string(file_path).unwrap().as_str()).unwrap();
 
-    // std::process::exit(0);
+    println!("Name : {}", sm_config.name);
+
 
     // let config_file = MyToml::parse(s)
     debug!("Load config !");
