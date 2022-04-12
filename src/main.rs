@@ -85,8 +85,7 @@ fn main() {
     // Config file exists
     let sm_config = SMConfig::parse(fs::read_to_string(file_path).unwrap().as_str()).unwrap();
 
-    println!("Name : {}", sm_config.name);
-
+    println!("Name : {}", sm_config.connections[0].name);
 
     // let config_file = MyToml::parse(s)
     debug!("Load config !");
