@@ -1,6 +1,6 @@
-use std::{fs, path::Path, str::FromStr};
-
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::{fs, path::Path};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ConnectConfig {
@@ -54,15 +54,13 @@ impl SMConfig {
         return Ok(t);
     }
 
-    pub fn create_file(self) -> Result<(), String> {
+    pub fn create_file(self) -> Result<()> {
         let file_path = SMConfig::config_file();
-        if !file_path.exists() {
-            fs::create_dir_all(file_path.parent().unwrap()).unwrap();
-            let str = toml::to_string(&self).unwrap();
-            fs::write(file_path, str.as_bytes()).unwrap();
-            Ok(())
-        } else {
-            Err(String::from_str("File alreay exists").unwrap())
-        }
+        fs::create_dir_all(file_path.parent().unwrap()).unwrap();
+
+        let str = toml::to_string(&self).with_context(|| "Cannot convert to toml")?;
+        fs::write(file_path, str.as_bytes())
+            .with_context(|| format!("Unable to write file : {}", file_path.display()))?;
+        Ok(())
     }
 }

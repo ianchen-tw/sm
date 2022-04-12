@@ -4,6 +4,7 @@ use std::{
     path::PathBuf,
 };
 
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 use dirs::home_dir;
 use log::{debug, info};
@@ -11,6 +12,7 @@ use simplelog::*;
 
 use crate::config::SMConfig;
 
+mod ask;
 mod config;
 
 /// SSh Manager
@@ -60,6 +62,8 @@ impl RunOpts {
 }
 
 fn main() {
+    ask::init();
+
     let args = Args::parse();
 
     let run_opts: RunOpts = match parse_args(args) {
