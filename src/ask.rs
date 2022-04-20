@@ -5,6 +5,14 @@ use inquire::{
 
 use crate::config::ConnectConfig;
 
+fn port_validator(input: &str) -> Result<(), String> {
+    return match input.parse::<u32>() {
+        Ok(0..=65535) => Ok(()),
+        Ok(_) => Err("consider using port number between 0 to 65535".to_string()),
+        Err(_) => Err("invalid input, please provide a number between 0 and 65535.".to_string()),
+    };
+}
+
 fn inquire_config(default: &ConnectConfig) -> ConnectConfig {
     fn ask(prompt: &str, default: &str) -> String {
         let answer = Text::new(prompt).with_default(default).prompt().unwrap();
@@ -17,14 +25,18 @@ fn inquire_config(default: &ConnectConfig) -> ConnectConfig {
 
     let server_addr = ask("Server address", &default.server_addr);
 
+    let port = Text::new("Port")
+        .with_default(&default.port.to_string())
+        .with_validator(&port_validator)
+        .with_help_message("port of the target machine")
+        .prompt()
+        .unwrap()
+        .parse::<u32>()
+        .unwrap();
 
-    // TODO: validation
-    let port_str = ask("Port", &default.port.to_string());
-    let port = port_str.parse::<u32>().unwrap();
-    
     // TODO: validate input
     let auth = ask("Authentication method", &default.auth);
-    
+
     // TODO: skip if using password
     let pem_path = ask("Pem path", &default.pem_path);
 
