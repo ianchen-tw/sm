@@ -1,6 +1,6 @@
 use inquire::{
     ui::{Color, RenderConfig, StyleSheet},
-    Text,
+    Select, Text,
 };
 
 use crate::config::ConnectConfig;
@@ -34,11 +34,15 @@ fn inquire_config(default: &ConnectConfig) -> ConnectConfig {
         .parse::<u32>()
         .unwrap();
 
-    // TODO: validate input
-    let auth = ask("Authentication method", &default.auth);
+    let auth = Select::new("Authentication method", vec!["none", "pem", "password"])
+        .prompt()
+        .unwrap()
+        .to_string();
 
-    // TODO: skip if using password
-    let pem_path = ask("Pem path", &default.pem_path);
+    let pem_path = match auth.as_str() {
+        "pem" => ask("Pem path", &default.pem_path),
+        _ => "".to_string(),
+    };
 
     return ConnectConfig {
         name: name,
