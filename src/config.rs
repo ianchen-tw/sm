@@ -3,14 +3,27 @@ use serde::{Deserialize, Serialize};
 use std::{fs, path::Path};
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum AuthMethod {
+    None,
+    Pem(String),
+    Passwd,
+}
+
+impl Default for AuthMethod {
+    fn default() -> Self {
+        AuthMethod::Pem("~/.ssh/id_rsa".to_string())
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ConnectConfig {
     pub name: String,
     pub desc: String,
     pub user: String,
     pub server_addr: String,
     pub port: u32,
-    pub pem_path: String,
-    pub auth: String,
+    pub auth_method: AuthMethod,
 }
 
 impl Default for ConnectConfig {
@@ -21,8 +34,7 @@ impl Default for ConnectConfig {
             user: "yac".to_string(),
             server_addr: "192.168.1.1".to_string(),
             port: 22,
-            pem_path: "~/.ssh/good".to_string(),
-            auth: "pem".to_string(),
+            auth_method:  AuthMethod::default(),
         }
     }
 }
@@ -58,7 +70,7 @@ impl SMConfig {
         let file_path = SMConfig::config_file();
         fs::create_dir_all(file_path.parent().unwrap()).unwrap();
 
-        let str = toml::to_string(&self).with_context(|| "Cannot convert to toml")?;
+        let str = toml::to_string(&self).with_context(|| "Cannot convert config to toml")?;
         fs::write(file_path, str.as_bytes())
             .with_context(|| format!("Unable to write file : {}", file_path.display()))?;
         Ok(())
