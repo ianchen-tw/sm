@@ -34,7 +34,7 @@ impl Default for ConnectConfig {
             user: "yac".to_string(),
             server_addr: "192.168.1.1".to_string(),
             port: 22,
-            auth_method:  AuthMethod::default(),
+            auth_method: AuthMethod::default(),
         }
     }
 }

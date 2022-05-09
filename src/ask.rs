@@ -34,14 +34,13 @@ fn inquire_config(default: &ConnectConfig) -> ConnectConfig {
         .parse::<u32>()
         .unwrap();
 
-
     let auth_opts = vec!["none", "pem", "password"];
     let start_cursor: usize = match default.auth_method {
         AuthMethod::None => 0,
         AuthMethod::Pem(_) => 1,
         AuthMethod::Passwd => 2,
     };
-    let message = format!("Authentication method [{}]",auth_opts[start_cursor]);
+    let message = format!("Authentication method [{}]", auth_opts[start_cursor]);
     let auth = match Select::new(&message, auth_opts)
         .with_starting_cursor(start_cursor)
         .prompt()

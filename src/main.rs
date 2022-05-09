@@ -13,6 +13,7 @@ use simplelog::*;
 use crate::config::SMConfig;
 
 mod ask;
+mod cmds;
 mod config;
 
 /// SSh Manager
@@ -96,7 +97,7 @@ fn main() {
 
     match run_opts.run_command {
         Command::CmdConfig => {
-            println!("Cmd Configs")
+            cmds::do_cmd_config();
         }
         Command::CmdConnect => {
             println!("Cmd Connect")
@@ -110,6 +111,10 @@ fn parse_args(args: Args) -> Result<RunOpts, String> {
 
     if args.debug {
         run_opts.set_debug_level(LevelFilter::Debug);
+    }
+
+    if let Some(cmd) = args.command {
+        run_opts.run_command = cmd;
     }
 
     let dir = match args.home {
