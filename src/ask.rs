@@ -5,15 +5,11 @@ use inquire::{
 
 use crate::config::{AuthMethod, ConnectConfig};
 
-fn port_validator(input: &str) -> Result<(), String> {
-    return match input.parse::<u32>() {
-        Ok(0..=65535) => Ok(()),
-        Ok(_) => Err("consider using port number between 0 to 65535".to_string()),
-        Err(_) => Err("invalid input, please provide a number between 0 and 65535.".to_string()),
-    };
+pub fn init() {
+    inquire::set_global_render_config(get_render_config());
 }
 
-fn inquire_config(default: &ConnectConfig) -> ConnectConfig {
+pub fn inquire_config(default: &ConnectConfig) -> ConnectConfig {
     fn ask(prompt: &str, default: &str) -> String {
         let answer = Text::new(prompt).with_default(default).prompt().unwrap();
         return answer;
@@ -69,22 +65,12 @@ fn inquire_config(default: &ConnectConfig) -> ConnectConfig {
     };
 }
 
-pub fn init() {
-    inquire::set_global_render_config(get_render_config());
-}
-
-pub fn do_ask() {
-    let default_config = ConnectConfig {
-        name: "my custom connection".to_string(),
-        desc: "my custom description".to_string(),
-        user: "root".to_string(),
-        server_addr: "192.168.1.1".to_string(),
-        port: 22,
-        auth_method: AuthMethod::default(),
+fn port_validator(input: &str) -> Result<(), String> {
+    return match input.parse::<u32>() {
+        Ok(0..=65535) => Ok(()),
+        Ok(_) => Err("consider using port number between 0 to 65535".to_string()),
+        Err(_) => Err("invalid input, please provide a number between 0 and 65535.".to_string()),
     };
-
-    let final_config = inquire_config(&default_config);
-    println!("final config: {:?}", final_config);
 }
 
 fn get_render_config() -> RenderConfig {
