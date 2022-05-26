@@ -26,12 +26,14 @@ impl ConfigSubCmd {
             ConfigSubCmd::Create => config_create(),
             ConfigSubCmd::Edit => {
                 println!("do config edit");
-                let current = select_config_for_edit();
-                let result = ask::inquire_config(&current);
+                let target = select_config();
+                let result = ask::inquire_config(&target);
                 replace_config(&result);
             }
             ConfigSubCmd::Delete => {
-                println!("do config delete")
+                println!("do config delete");
+                let target = select_config();
+                remove_config(&target);
             }
         }
     }
@@ -53,7 +55,7 @@ fn config_create() {
     // TODO: Write to connection file
 }
 
-fn select_config_for_edit() -> ConnectConfig {
+fn select_config() -> ConnectConfig {
     return ConnectConfig {
         name: "my custom connection".to_string(),
         desc: "my custom description".to_string(),
@@ -67,4 +69,9 @@ fn select_config_for_edit() -> ConnectConfig {
 // Replace existing config with provided one
 fn replace_config(_cfg: &ConnectConfig) {
     println!("Config replaced!")
+}
+
+// Replace existing config with provided one
+fn remove_config(_cfg: &ConnectConfig) {
+    println!("Config removed!")
 }
