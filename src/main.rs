@@ -97,7 +97,7 @@ fn main() {
 
     match run_opts.run_command {
         Command::CmdConfig => {
-            cmds::do_cmd_config();
+            cmds::do_cmd_config(sm_config);
         }
         Command::CmdConnect => {
             println!("Cmd Connect")
