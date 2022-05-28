@@ -2,6 +2,7 @@ use std::{
     env::{self},
     fs,
     path::PathBuf,
+    str::FromStr,
 };
 
 use anyhow::Result;
@@ -10,7 +11,7 @@ use dirs::home_dir;
 use log::{debug, info};
 use simplelog::*;
 
-use crate::config::SMConfig;
+use crate::config::{SMConfig, PATH_CONFIG};
 
 mod ask;
 mod cmds;
@@ -78,22 +79,21 @@ fn main() {
     init_logger(run_opts.log_level);
     debug!("Program Start");
 
-    let file_path = config::SMConfig::config_file();
+    let file_path = PathBuf::from_str(PATH_CONFIG).unwrap();
 
-    if !file_path.exists() {
-        let config = config::SMConfig::default();
-        config.create_file().unwrap();
-        info!("File not exists, create a default config");
-        std::process::exit(0);
-    }
-
-    // Config file exists
-    let sm_config = SMConfig::parse(fs::read_to_string(file_path).unwrap().as_str()).unwrap();
-
-    println!("Name : {}", sm_config.connections[0].name);
+    let sm_config = if !file_path.exists() {
+        if let Command::CmdConnect = run_opts.run_command {
+            info!("File not exists, use `config` to create a config file first.");
+            info!("Use -h option for help message.");
+            std::process::exit(0)
+        }
+        SMConfig::default()
+    } else {
+        SMConfig::parse(fs::read_to_string(file_path).unwrap().as_str()).unwrap()
+    };
 
     // let config_file = MyToml::parse(s)
-    debug!("Load config !");
+    info!("Load config !, {:?}", sm_config);
 
     match run_opts.run_command {
         Command::CmdConfig => {

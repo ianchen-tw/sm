@@ -1,5 +1,8 @@
 use crate::ask;
 use crate::config::{AuthMethod, ConnectConfig, SMConfig};
+use inquire::Select;
+use log::info;
+
 #[derive(Debug)]
 pub enum ConfigSubCmd {
     Create(SMConfig),
@@ -9,7 +12,6 @@ pub enum ConfigSubCmd {
 impl ConfigSubCmd {
     /// Get an subcommand by prompting to the user
     pub fn prompt(cur_config: SMConfig) -> ConfigSubCmd {
-        use inquire::Select;
         let opts = vec!["Create", "Edit", "Delete"];
         match Select::new("Select cmd", opts).prompt().unwrap() {
             "Create" => ConfigSubCmd::Create(cur_config),
@@ -22,56 +24,52 @@ impl ConfigSubCmd {
     /// Start the subcommand
     pub fn run(self) {
         match self {
-            ConfigSubCmd::Create(val) => config_create(val),
-            ConfigSubCmd::Edit(_val) => {
-                println!("do config edit");
-                let target = select_config();
-                let result = ask::inquire_config(&target);
-                replace_config(&result);
+            ConfigSubCmd::Create(mut sm_config) => {
+                let default = ConnectConfig {
+                    name: "my custom connection".to_string(),
+                    desc: "my custom description".to_string(),
+                    user: "root".to_string(),
+                    server_addr: "192.168.1.1".to_string(),
+                    port: 22,
+                    auth_method: AuthMethod::default(),
+                };
+                let result = ask::inquire_config(&default);
+                println!("final config: {:?}", result);
+                sm_config.connections.push(result);
+                sm_config.save_config();
             }
-            ConfigSubCmd::Delete(_val) => {
+            ConfigSubCmd::Edit(mut sm_config) => {
+                if sm_config.connections.len() == 0 {
+                    info!("No config exists, create one before editing");
+                    std::process::exit(0)
+                }
+                println!("do config edit");
+                let target_index = select_config(&sm_config);
+                let result = ask::inquire_config(&sm_config.connections[target_index]);
+                sm_config.connections[target_index] = result;
+                sm_config.save_config();
+            }
+            ConfigSubCmd::Delete(mut sm_config) => {
                 println!("do config delete");
-                let target = select_config();
-                remove_config(&target);
+                let target_index = select_config(&sm_config);
+                sm_config.connections.remove(target_index);
+                sm_config.save_config();
             }
         }
     }
 }
 
-fn config_create(mut sm_config: SMConfig) {
-    let default = ConnectConfig {
-        name: "my custom connection".to_string(),
-        desc: "my custom description".to_string(),
-        user: "root".to_string(),
-        server_addr: "192.168.1.1".to_string(),
-        port: 22,
-        auth_method: AuthMethod::default(),
-    };
-    let result = ask::inquire_config(&default);
-    println!("final config: {:?}", result);
-    sm_config.connections.push(result);
-
-    // TODO: Write to connection file
-    println!("sm config: {:?}", sm_config);
-}
-
-fn select_config() -> ConnectConfig {
-    return ConnectConfig {
-        name: "my custom connection".to_string(),
-        desc: "my custom description".to_string(),
-        user: "root".to_string(),
-        server_addr: "192.168.1.1".to_string(),
-        port: 22,
-        auth_method: AuthMethod::default(),
-    };
-}
-
-// Replace existing config with provided one
-fn replace_config(_cfg: &ConnectConfig) {
-    println!("Config replaced!")
-}
-
-// Replace existing config with provided one
-fn remove_config(_cfg: &ConnectConfig) {
-    println!("Config removed!")
+/// Return the index of connect config selected
+fn select_config(sm_config: &SMConfig) -> usize {
+    let names = sm_config
+        .connections
+        .iter()
+        .map(|c| String::from(&c.name))
+        .collect();
+    let result = Select::new("Select a connection", names).prompt().unwrap();
+    return sm_config
+        .connections
+        .iter()
+        .position(|config| &result == &config.name)
+        .unwrap();
 }
