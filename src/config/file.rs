@@ -1,7 +1,7 @@
-use anyhow::{Context};
+use anyhow::Context;
 use std::convert::From;
 use std::fs::{self};
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use std::str::FromStr;
 
 pub const PATH_CONFIG: &str = "./sm/config.toml";

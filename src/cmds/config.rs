@@ -9,6 +9,7 @@ pub enum ConfigSubCmd {
     Edit(SMConfig),
     Delete(SMConfig),
 }
+
 impl ConfigSubCmd {
     /// Get an subcommand by prompting to the user
     pub fn prompt(cur_config: SMConfig) -> ConfigSubCmd {
@@ -44,32 +45,17 @@ impl ConfigSubCmd {
                     std::process::exit(0)
                 }
                 println!("do config edit");
-                let target_index = select_config(&sm_config);
+                let target_index = sm_config.select();
                 let result = ask::inquire_config(&sm_config.connections[target_index]);
                 sm_config.connections[target_index] = result;
                 sm_config.save_config();
             }
             ConfigSubCmd::Delete(mut sm_config) => {
                 println!("do config delete");
-                let target_index = select_config(&sm_config);
+                let target_index = sm_config.select();
                 sm_config.connections.remove(target_index);
                 sm_config.save_config();
             }
         }
     }
-}
-
-/// Return the index of connect config selected
-fn select_config(sm_config: &SMConfig) -> usize {
-    let names = sm_config
-        .connections
-        .iter()
-        .map(|c| String::from(&c.name))
-        .collect();
-    let result = Select::new("Select a connection", names).prompt().unwrap();
-    return sm_config
-        .connections
-        .iter()
-        .position(|config| &result == &config.name)
-        .unwrap();
 }

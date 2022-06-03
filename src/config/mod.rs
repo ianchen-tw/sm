@@ -1,8 +1,7 @@
 use anyhow::{Context, Result};
+use inquire::Select;
 use serde::{Deserialize, Serialize};
-use std::{
-    fs::{self},
-};
+use std::fs::{self};
 
 mod auth;
 mod connect;
@@ -54,5 +53,20 @@ impl SMConfig {
             Err(err) => return Err(format!("Cannot parse config - {}", err)),
         };
         return Ok(t);
+    }
+
+    /// Return the index of connect config selected
+    pub fn select(&self) -> usize {
+        let names = self
+            .connections
+            .iter()
+            .map(|c| String::from(&c.name))
+            .collect();
+        let result = Select::new("Select a connection", names).prompt().unwrap();
+        return self
+            .connections
+            .iter()
+            .position(|config| &result == &config.name)
+            .unwrap();
     }
 }

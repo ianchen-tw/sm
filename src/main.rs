@@ -92,7 +92,6 @@ fn main() {
         SMConfig::parse(fs::read_to_string(file_path).unwrap().as_str()).unwrap()
     };
 
-    // let config_file = MyToml::parse(s)
     info!("Load config !, {:?}", sm_config);
 
     match run_opts.run_command {
@@ -100,7 +99,7 @@ fn main() {
             cmds::do_cmd_config(sm_config);
         }
         Command::CmdConnect => {
-            println!("Cmd Connect")
+            cmds::do_connect_subcmd(sm_config);
         }
     }
     debug!("Program end");
