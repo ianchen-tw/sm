@@ -8,15 +8,17 @@ pub enum ConfigSubCmd {
     Create(SMConfig),
     Edit(SMConfig),
     Delete(SMConfig),
+    Show(SMConfig),
 }
 
 impl ConfigSubCmd {
     /// Get an subcommand by prompting to the user
     pub fn prompt(cur_config: SMConfig) -> ConfigSubCmd {
-        let opts = vec!["Create", "Edit", "Delete"];
+        let opts = vec!["Create", "Edit", "Show", "Delete"];
         match Select::new("Select cmd", opts).prompt().unwrap() {
             "Create" => ConfigSubCmd::Create(cur_config),
             "Edit" => ConfigSubCmd::Edit(cur_config),
+            "Show" => ConfigSubCmd::Show(cur_config),
             "Delete" => ConfigSubCmd::Delete(cur_config),
             _ => unreachable!(),
         }
@@ -49,6 +51,15 @@ impl ConfigSubCmd {
                 let result = ask::inquire_config(&sm_config.connections[target_index]);
                 sm_config.connections[target_index] = result;
                 sm_config.save_config();
+            }
+            ConfigSubCmd::Show(sm_config) => {
+                if sm_config.connections.len() == 0 {
+                    info!("No config exists");
+                    std::process::exit(0)
+                }
+                let index = sm_config.select();
+                let target = &sm_config.connections[index];
+                println!("target: {:?}", target);
             }
             ConfigSubCmd::Delete(mut sm_config) => {
                 println!("do config delete");
