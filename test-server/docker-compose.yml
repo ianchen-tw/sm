@@ -1,0 +1,17 @@
+version: "2.1"
+services:
+  ssh-server:
+    # https://hub.docker.com/r/linuxserver/openssh-server
+    image: linuxserver/openssh-server
+    container_name: ssh-server
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Taipei
+      - PASSWORD_ACCESS=true #optional
+      - USER_PASSWORD=passwd #optional
+      - USER_NAME=ian #optional
+    ports:
+      # Host: Container
+      - 2222:2222
+    restart: unless-stopped
