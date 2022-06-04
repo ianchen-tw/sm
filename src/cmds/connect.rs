@@ -1,23 +1,32 @@
+use anyhow::Context;
+
 use crate::config::AuthMethod;
 use crate::config::ConnectConfig;
 
+use std::process;
 use std::vec::Vec;
 
 pub fn connect_host(config: &ConnectConfig) {
-    println!("Connect to config: {}", &config.name);
-
-    let mut cmd = Vec::new();
-
-    cmd.push("ssh");
+    let mut args = Vec::new();
 
     if let AuthMethod::Pem(location) = &config.auth_method {
-        cmd.push("-i");
-        cmd.push(&location.as_str());
+        args.push("-i");
+        args.push(&location.as_str())
     }
 
-    // Host
-    let s = format!("{}@{}:{}", config.user, config.server_addr, config.port);
-    cmd.push(s.as_str());
+    let port = format!("{}", config.port);
+    args.push("-p");
+    args.push(port.as_str().clone());
 
-    println!("{:?}", cmd);
+    args.push("-l");
+    args.push(&config.user);
+
+    args.push(&config.server_addr.as_str());
+
+    let mut sp = process::Command::new("ssh")
+        .args(args)
+        .spawn()
+        .with_context(|| "Unable to connect to host")
+        .unwrap();
+    sp.wait().unwrap();
 }
