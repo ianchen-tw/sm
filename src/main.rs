@@ -92,7 +92,7 @@ fn main() {
         SMConfig::parse(fs::read_to_string(file_path).unwrap().as_str()).unwrap()
     };
 
-    info!("Load config !, {:?}", sm_config);
+    debug!("Load config !, {:?}", sm_config);
 
     match run_opts.run_command {
         Command::CmdConfig => {
