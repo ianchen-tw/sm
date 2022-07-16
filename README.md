@@ -1,0 +1,2 @@
+# sm - ssh manager
+

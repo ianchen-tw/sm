@@ -37,7 +37,7 @@ impl ConfigSubCmd {
                     auth_method: AuthMethod::default(),
                 };
                 let result = ask::inquire_config(&default);
-                println!("final config: {:?}", result);
+                result.show();
                 sm_config.connections.push(result);
                 sm_config.save_config();
             }
@@ -59,7 +59,7 @@ impl ConfigSubCmd {
                 }
                 let index = sm_config.select();
                 let target = &sm_config.connections[index];
-                println!("target: {:?}", target);
+                target.show();
             }
             ConfigSubCmd::Delete(mut sm_config) => {
                 println!("do config delete");

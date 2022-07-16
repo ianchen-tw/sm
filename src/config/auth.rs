@@ -14,3 +14,14 @@ impl Default for AuthMethod {
         AuthMethod::Pem("~/.ssh/id_rsa".to_string())
     }
 }
+
+impl AuthMethod {
+    // name of the auth method
+    pub fn name(&self) -> &'static str {
+        match self {
+            AuthMethod::None => "none",
+            AuthMethod::Passwd => "passwd",
+            AuthMethod::Pem(_) => "pem",
+        }
+    }
+}
