@@ -1,20 +1,16 @@
-
-use std::{
-    path::{Path},
-};
+use std::path::Path;
 
 mod suggest;
 
 use suggest::{OsFileLister, PathSuggester};
-
 
 fn try_list(root: &str, relative_path: &str) {
     let mut sg = PathSuggester::new(root, &OsFileLister);
 
     use std::path::Component;
 
-    for comp in Path::new(relative_path).components(){
-        if let Component::Normal(part) = comp{
+    for comp in Path::new(relative_path).components() {
+        if let Component::Normal(part) = comp {
             sg.push_path(part.to_str().unwrap());
         }
     }
@@ -25,7 +21,7 @@ fn try_list(root: &str, relative_path: &str) {
             let total = 3;
             for (i, pick) in res.iter().take(total).enumerate() {
                 print!("{}, ", pick);
-                if i == total-1{
+                if i == total - 1 {
                     print!("...")
                 }
             }

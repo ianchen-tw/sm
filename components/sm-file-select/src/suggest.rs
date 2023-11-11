@@ -1,4 +1,4 @@
-use anyhow::{Result};
+use anyhow::Result;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -35,21 +35,15 @@ impl<'a, T: ListDir> PathSuggester<'a, T> {
     pub fn push_path(&mut self, dir: &str) {
         self.parents.push(dir);
     }
-
 }
 
-
 pub trait ListDir {
-    fn new() -> Self;
     fn list_filenames(&self, dir: &Path) -> Result<Vec<String>>;
 }
 
 pub struct OsFileLister;
 
 impl ListDir for OsFileLister {
-    fn new() -> Self {
-        OsFileLister {}
-    }
     fn list_filenames(&self, dir: &Path) -> Result<Vec<String>> {
         let mut result = vec![];
 
@@ -63,7 +57,6 @@ impl ListDir for OsFileLister {
         Ok(result)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -82,13 +75,13 @@ mod tests {
         fn set_payload(&self, res: Vec<String>) {
             self.payload.borrow_mut().clone_from(&res);
         }
-    }
-    impl ListDir for FakeLister {
         fn new() -> Self {
             Self {
                 payload: vec![].into(),
             }
         }
+    }
+    impl ListDir for FakeLister {
         fn list_filenames(&self, _dir: &Path) -> Result<Vec<String>> {
             Ok(self.payload.borrow().clone())
         }
