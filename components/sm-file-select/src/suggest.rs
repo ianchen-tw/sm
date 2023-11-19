@@ -1,22 +1,48 @@
 use anyhow::Result;
+use dyn_clone::DynClone;
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
-pub struct PathSuggester<'a, T: ListDir> {
-    root: PathBuf,
-    parents: PathBuf,
-    lister: &'a T,
+pub trait ListDir: DynClone {
+    fn list_filenames(&self, dir: &Path) -> Result<Vec<String>>;
 }
 
-impl<'a, T: ListDir> PathSuggester<'a, T> {
-    pub fn new(root: &str, lister: &'a T) -> PathSuggester<'a, T> {
+dyn_clone::clone_trait_object!(ListDir);
+
+#[derive(Clone)]
+pub struct PathSuggester {
+    root: PathBuf,
+    parents: PathBuf,
+    lister: Box<dyn ListDir>,
+}
+
+impl PathSuggester {
+    pub fn new(root: &str, relative_path: &str) -> PathSuggester {
+        Self::build(root, relative_path, Box::new(OsFileLister))
+    }
+
+    pub fn new_with_lister(root: &str, lister: Box<dyn ListDir>) -> PathSuggester {
         Self {
             root: root.into(),
             parents: PathBuf::new(),
             lister,
         }
+    }
+
+    fn build(root: &str, relative_path: &str, lister: Box<dyn ListDir>) -> PathSuggester {
+        let mut instance = Self::new_with_lister(root, lister);
+        for comp in Path::new(relative_path).components() {
+            if let Component::Normal(part) = comp {
+                instance.push_path(part.to_str().unwrap());
+            }
+        }
+
+        if !instance.current_path().exists() {
+            instance.parents.pop();
+        }
+        instance
     }
 
     pub fn suggest_with_strategy_all_nodes(&self) -> Result<Vec<String>> {
@@ -28,19 +54,12 @@ impl<'a, T: ListDir> PathSuggester<'a, T> {
         self.root.join(&self.parents)
     }
 
-    pub fn pop_path(&mut self) -> bool {
-        self.parents.pop()
-    }
-
     pub fn push_path(&mut self, dir: &str) {
         self.parents.push(dir);
     }
 }
 
-pub trait ListDir {
-    fn list_filenames(&self, dir: &Path) -> Result<Vec<String>>;
-}
-
+#[derive(Clone, Default)]
 pub struct OsFileLister;
 
 impl ListDir for OsFileLister {
@@ -60,57 +79,50 @@ impl ListDir for OsFileLister {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
     use std::path::Path;
     use std::vec;
 
     use anyhow::{Ok, Result};
 
     use super::{ListDir, PathSuggester};
+    #[derive(Clone, Default)]
     struct FakeLister {
-        payload: RefCell<Vec<String>>,
+        payload: Vec<String>,
     }
 
     impl FakeLister {
-        fn set_payload(&self, res: Vec<String>) {
-            self.payload.borrow_mut().clone_from(&res);
-        }
-        fn new() -> Self {
-            Self {
-                payload: vec![].into(),
-            }
+        fn new(payload: Vec<String>) -> Self {
+            Self { payload }
         }
     }
     impl ListDir for FakeLister {
         fn list_filenames(&self, _dir: &Path) -> Result<Vec<String>> {
-            Ok(self.payload.borrow().clone())
+            Ok(self.payload.clone())
         }
     }
 
     #[test]
     fn do_pushpop() {
-        let lister = FakeLister::new();
+        let lister = Box::new(FakeLister::new(vec![
+            "a".to_string(),
+            "b".to_string(),
+            "c".to_string(),
+        ]));
 
-        let mut sg = PathSuggester::new("/1", &lister);
+        let mut sg = PathSuggester::new_with_lister("/1", lister);
         sg.push_path("2");
         assert_eq!(sg.current_path(), Path::new("/1/2"));
-        sg.pop_path();
-        assert_eq!(sg.current_path(), Path::new("/1"));
-        sg.pop_path();
-        assert_eq!(sg.current_path(), Path::new("/1"));
-
-        lister.set_payload(vec!["a".to_string(), "b".to_string(), "c".to_string()]);
         sg.current_path();
     }
 
     #[test]
     fn do_suggest() {
-        let lister = FakeLister {
-            payload: vec![].into(),
-        };
-        let sg = PathSuggester::new("/1", &lister);
-
-        lister.set_payload(vec!["a".to_string(), "b".to_string(), "c".to_string()]);
+        let lister = Box::new(FakeLister::new(vec![
+            "a".to_string(),
+            "b".to_string(),
+            "c".to_string(),
+        ]));
+        let sg = PathSuggester::new_with_lister("/1", lister);
         assert_eq!(
             sg.suggest_with_strategy_all_nodes().unwrap(),
             vec!["a".to_string(), "b".to_string(), "c".to_string()]
