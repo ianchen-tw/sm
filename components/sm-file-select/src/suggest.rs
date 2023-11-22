@@ -1,12 +1,16 @@
 use anyhow::Result;
 use dyn_clone::DynClone;
+use log::debug;
 use std::{
     fs,
     path::{Component, Path, PathBuf},
+    vec,
 };
 
 pub trait ListDir: DynClone {
-    fn list_filenames(&self, dir: &Path) -> Result<Vec<String>>;
+
+    /// List entries with full path
+    fn list_entries(&self, dir: &Path) -> Result<Vec<String>>;
 }
 
 dyn_clone::clone_trait_object!(ListDir);
@@ -16,6 +20,17 @@ pub struct PathSuggester {
     root: PathBuf,
     parents: PathBuf,
     lister: Box<dyn ListDir>,
+}
+
+fn extend_path(base: &Path,path: &Path) -> PathBuf{
+    let mut parts: Vec<String> = vec![];
+    for p in path.components() {
+        if let Component::Normal(p) = p {
+            parts.push(p.to_string_lossy().to_string())
+        }
+    }
+    let extended_path: PathBuf = parts.iter().fold(base.into(), |acc, layer| acc.join(layer));
+    extended_path
 }
 
 impl PathSuggester {
@@ -47,7 +62,24 @@ impl PathSuggester {
 
     pub fn suggest_with_strategy_all_nodes(&self) -> Result<Vec<String>> {
         // println!("Listing files in path: {}", &self.get_path().display());
-        self.lister.list_filenames(&self.current_path())
+        self.lister.list_entries(&self.current_path())
+    }
+
+    pub fn suggest_with_strategy_filter(&self, input: &str) -> Result<Vec<String>> {
+        // input_actual.push(input);
+        debug!("suggest_with_strategy_filter, root={:#?}, input={:#?}", self.root.display(), input);
+
+        let to_match: PathBuf = extend_path(self.root.as_path(), Path::new(input));
+    
+
+        let mut result = vec![];
+        for filename in self.suggest_with_strategy_all_nodes().unwrap() {
+            if filename.starts_with(&to_match.to_string_lossy().to_string()) {
+                result.push(filename);
+            }
+        }
+        result.sort();
+        Ok(result)
     }
 
     pub fn current_path(&self) -> PathBuf {
@@ -63,15 +95,20 @@ impl PathSuggester {
 pub struct OsFileLister;
 
 impl ListDir for OsFileLister {
-    fn list_filenames(&self, dir: &Path) -> Result<Vec<String>> {
+    fn list_entries(&self, dir: &Path) -> Result<Vec<String>> {
         let mut result = vec![];
 
         let entries = fs::read_dir(dir)?;
         for entry in entries {
-            let entry = entry?;
-            if let Some(name) = entry.path().file_name() {
-                result.push(name.to_string_lossy().into_owned());
-            }
+            let path = entry?.path();
+
+            let final_name = match path.is_dir() {
+                true => {
+                    format!("{}/", path.to_string_lossy())
+                }
+                false => path.to_string_lossy().into_owned(),
+            };
+            result.push(final_name);
         }
         Ok(result)
     }
@@ -96,7 +133,7 @@ mod tests {
         }
     }
     impl ListDir for FakeLister {
-        fn list_filenames(&self, _dir: &Path) -> Result<Vec<String>> {
+        fn list_entries(&self, _dir: &Path) -> Result<Vec<String>> {
             Ok(self.payload.clone())
         }
     }
