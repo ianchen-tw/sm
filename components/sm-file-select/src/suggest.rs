@@ -54,7 +54,7 @@ impl PathSuggester {
             }
         }
 
-        if instance.current_path().exists() && instance.current_path().is_dir() && !relative_path.ends_with('/'){
+        if instance.current_path().exists() && instance.current_path().is_dir() && relative_path.ends_with('/'){
             // We only list current directory if the input ends with a slash('/')
         } else {
             instance.parents.pop();

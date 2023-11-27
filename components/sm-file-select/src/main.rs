@@ -16,6 +16,9 @@ use log::{debug, info};
 use simplelog::*;
 
 
+fn get_home() -> String {
+    home::home_dir().unwrap().to_str().unwrap().to_string()
+}
 #[derive(Clone)]
 struct FilePathCompleter{
     sg: PathSuggester,
@@ -24,10 +27,12 @@ struct FilePathCompleter{
 impl Default for FilePathCompleter {
     fn default() -> Self {
         Self {
-            sg: PathSuggester::new("/home/ian", ""),
+            sg: PathSuggester::new(&get_home(), ""),
         }
     }
 }
+
+
 
 impl Autocomplete for FilePathCompleter{
     fn get_completion(
@@ -43,7 +48,7 @@ impl Autocomplete for FilePathCompleter{
     fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, CustomUserError> {
         debug!("get_suggestions start, input={:#?}", input);
 
-        let sg = PathSuggester::new("/home/ian", input);
+        let sg = PathSuggester::new(&get_home(), input);
         // Ok(sg.suggest_with_strategy_all_nodes())
         Ok(sg.suggest_with_strategy_filter(input))
     }
@@ -90,7 +95,7 @@ fn main() {
     try_auto_complete("~", ".");
 
     info!("Interactive:");
-    let ans = Text::new("Path Selected: ~/")
+    let ans = Text::new(&format!("Path Selected: {}/", get_home()) )
         .with_autocomplete(FilePathCompleter::default())
         .with_help_message("...")
         .prompt();
