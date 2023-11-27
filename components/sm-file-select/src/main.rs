@@ -3,9 +3,12 @@ mod suggest;
 
 
 
-use suggest::{PathSuggester};
+
+
+use suggest::PathSuggester;
 
 use inquire::{
+    Text,
     autocompletion::{Autocomplete, Replacement},
     CustomUserError,
 };
@@ -41,8 +44,8 @@ impl Autocomplete for FilePathCompleter{
         debug!("get_suggestions start, input={:#?}", input);
 
         let sg = PathSuggester::new("/home/ian", input);
-        // Ok(sg.suggest_with_strategy_all_nodes().unwrap())
-        Ok(sg.suggest_with_strategy_filter(input).unwrap())
+        // Ok(sg.suggest_with_strategy_all_nodes())
+        Ok(sg.suggest_with_strategy_filter(input))
     }
 }
 
@@ -75,24 +78,25 @@ fn try_auto_complete(root: &str, input: &str) {
 }
 
 fn main() {
-    init_logger(LevelFilter::Debug);
+    init_logger(LevelFilter::Info);
 
-    try_auto_complete("/home/ian", "");
-    try_auto_complete("/home/ian", "D");
-    try_auto_complete("/home/ian", "go/");
-    try_auto_complete("/home/ian", "./go/");
-    try_auto_complete("/home/ian", "./go/b");
-    try_auto_complete("/home/ian", "./.ssh");
+    try_auto_complete("/home/ian/", "");
+    try_auto_complete("/home/ian/", "D");
+    try_auto_complete("/home/ian/", "go");
+    try_auto_complete("/home/ian/", "go/");
+    try_auto_complete("/home/ian/", "./go/");
+    try_auto_complete("/home/ian/", "./go/b");
+    try_auto_complete("/home/ian/", "./.ssh");
     try_auto_complete("~", ".");
 
-    // info!("Interactive:");
-    // let ans = Text::new("Path Selected: ~/")
-    //     .with_autocomplete(FilePathCompleter::default())
-    //     .with_help_message("...")
-    //     .prompt();
+    info!("Interactive:");
+    let ans = Text::new("Path Selected: ~/")
+        .with_autocomplete(FilePathCompleter::default())
+        .with_help_message("...")
+        .prompt();
 
-    // match ans {
-    //     Ok(path) => println!("Path: {path}"),
-    //     Err(error) => println!("Error with questionnaire, try again later: {error:?}"),
-    // }
+    match ans {
+        Ok(path) => println!("Path: {path}"),
+        Err(error) => println!("Error with questionnaire, try again later: {error:?}"),
+    }
 }

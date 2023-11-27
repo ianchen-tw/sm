@@ -54,18 +54,24 @@ impl PathSuggester {
             }
         }
 
-        if !instance.current_path().exists() {
+        if instance.current_path().exists() && instance.current_path().is_dir() && !relative_path.ends_with('/'){
+            // We only list current directory if the input ends with a slash('/')
+        } else {
             instance.parents.pop();
         }
         instance
     }
 
-    pub fn suggest_with_strategy_all_nodes(&self) -> Result<Vec<String>> {
+    pub fn suggest_with_strategy_all_nodes(&self) -> Vec<String> {
         // println!("Listing files in path: {}", &self.get_path().display());
-        self.lister.list_entries(&self.current_path())
+        if let Ok(result) = self.lister.list_entries(&self.current_path()) {
+            result
+        }else{
+            vec![]
+        }
     }
 
-    pub fn suggest_with_strategy_filter(&self, input: &str) -> Result<Vec<String>> {
+    pub fn suggest_with_strategy_filter(&self, input: &str) -> Vec<String> {
         // input_actual.push(input);
         debug!("suggest_with_strategy_filter, root={:#?}, input={:#?}", self.root.display(), input);
 
@@ -73,13 +79,13 @@ impl PathSuggester {
     
 
         let mut result = vec![];
-        for filename in self.suggest_with_strategy_all_nodes().unwrap() {
+        for filename in self.suggest_with_strategy_all_nodes() {
             if filename.starts_with(&to_match.to_string_lossy().to_string()) {
                 result.push(filename);
             }
         }
         result.sort();
-        Ok(result)
+        result
     }
 
     pub fn current_path(&self) -> PathBuf {
@@ -161,7 +167,7 @@ mod tests {
         ]));
         let sg = PathSuggester::new_with_lister("/1", lister);
         assert_eq!(
-            sg.suggest_with_strategy_all_nodes().unwrap(),
+            sg.suggest_with_strategy_all_nodes(),
             vec!["a".to_string(), "b".to_string(), "c".to_string()]
         );
     }
