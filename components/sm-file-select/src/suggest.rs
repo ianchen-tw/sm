@@ -8,7 +8,6 @@ use std::{
 };
 
 pub trait ListDir: DynClone {
-
     /// List entries with full path
     fn list_entries(&self, dir: &Path) -> Result<Vec<String>>;
 }
@@ -22,7 +21,7 @@ pub struct PathSuggester {
     lister: Box<dyn ListDir>,
 }
 
-fn extend_path(base: &Path,path: &Path) -> PathBuf{
+fn extend_path(base: &Path, path: &Path) -> PathBuf {
     let mut parts: Vec<String> = vec![];
     for p in path.components() {
         if let Component::Normal(p) = p {
@@ -54,7 +53,10 @@ impl PathSuggester {
             }
         }
 
-        if instance.current_path().exists() && instance.current_path().is_dir() && relative_path.ends_with('/'){
+        if instance.current_path().exists()
+            && instance.current_path().is_dir()
+            && relative_path.ends_with('/')
+        {
             // We only list current directory if the input ends with a slash('/')
         } else {
             instance.parents.pop();
@@ -66,17 +68,20 @@ impl PathSuggester {
         // println!("Listing files in path: {}", &self.get_path().display());
         if let Ok(result) = self.lister.list_entries(&self.current_path()) {
             result
-        }else{
+        } else {
             vec![]
         }
     }
 
     pub fn suggest_with_strategy_filter(&self, input: &str) -> Vec<String> {
         // input_actual.push(input);
-        debug!("suggest_with_strategy_filter, root={:#?}, input={:#?}", self.root.display(), input);
+        debug!(
+            "suggest_with_strategy_filter, root={:#?}, input={:#?}",
+            self.root.display(),
+            input
+        );
 
         let to_match: PathBuf = extend_path(self.root.as_path(), Path::new(input));
-    
 
         let mut result = vec![];
         for filename in self.suggest_with_strategy_all_nodes() {
@@ -106,6 +111,7 @@ impl ListDir for OsFileLister {
 
         let entries = fs::read_dir(dir)?;
         for entry in entries {
+            // Full path
             let path = entry?.path();
 
             let final_name = match path.is_dir() {

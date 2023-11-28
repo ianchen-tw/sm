@@ -1,26 +1,19 @@
-
 mod suggest;
-
-
-
-
 
 use suggest::PathSuggester;
 
 use inquire::{
-    Text,
     autocompletion::{Autocomplete, Replacement},
-    CustomUserError,
+    CustomUserError, Text,
 };
 use log::{debug, info};
 use simplelog::*;
-
 
 fn get_home() -> String {
     home::home_dir().unwrap().to_str().unwrap().to_string()
 }
 #[derive(Clone)]
-struct FilePathCompleter{
+struct FilePathCompleter {
     sg: PathSuggester,
 }
 
@@ -32,16 +25,23 @@ impl Default for FilePathCompleter {
     }
 }
 
-
-
-impl Autocomplete for FilePathCompleter{
+impl Autocomplete for FilePathCompleter {
     fn get_completion(
         &mut self,
         input: &str,
         highlighted_suggestion: Option<String>,
     ) -> Result<Replacement, CustomUserError> {
-        
-        debug!("get_completion start input={:#?}, hilighted={:#?}", input, highlighted_suggestion);
+        debug!(
+            "get_completion start input={:#?}, hilighted={:#?}",
+            input, highlighted_suggestion
+        );
+
+        if let Some(suggestion) = highlighted_suggestion {
+            let result = suggestion
+                .strip_prefix(&self.sg.current_path().to_string_lossy().to_string())
+                .unwrap();
+            return Ok(Replacement::Some(result.to_string()));
+        }
         Ok(Some(input.into()))
     }
 
@@ -49,7 +49,6 @@ impl Autocomplete for FilePathCompleter{
         debug!("get_suggestions start, input={:#?}", input);
 
         let sg = PathSuggester::new(&get_home(), input);
-        // Ok(sg.suggest_with_strategy_all_nodes())
         Ok(sg.suggest_with_strategy_filter(input))
     }
 }
@@ -70,10 +69,13 @@ fn try_auto_complete(root: &str, input: &str) {
 
     match sg.get_suggestions(input) {
         Ok(res) => {
-
             let prefix: String = sg.sg.current_path().to_string_lossy().to_string();
             // todo: remove entry limit
-            let res: Vec<&str> = res.iter().take(15).map(|item|item.strip_prefix(&prefix).unwrap() ).collect();
+            let res: Vec<&str> = res
+                .iter()
+                .take(15)
+                .map(|item| item.strip_prefix(&prefix).unwrap())
+                .collect();
             info!("result {:#?}", res);
         }
         Err(err) => {
@@ -95,7 +97,7 @@ fn main() {
     try_auto_complete("~", ".");
 
     info!("Interactive:");
-    let ans = Text::new(&format!("Path Selected: {}/", get_home()) )
+    let ans = Text::new(&format!("Path Selected: {}/", get_home()))
         .with_autocomplete(FilePathCompleter::default())
         .with_help_message("...")
         .prompt();
