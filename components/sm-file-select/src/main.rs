@@ -42,14 +42,19 @@ impl Autocomplete for FilePathCompleter {
                 .unwrap();
             return Ok(Replacement::Some(result.to_string()));
         }
-        Ok(Some(input.into()))
+        Ok(Replacement::Some(
+            self.sg
+                .suggest_common_prefix(input.to_string())
+                .strip_prefix(&self.sg.current_path().to_string_lossy().to_string())
+                .unwrap()
+                .to_string(),
+        ))
     }
 
     fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, CustomUserError> {
         debug!("get_suggestions start, input={:#?}", input);
-
         let sg = PathSuggester::new(&get_home(), input);
-        Ok(sg.suggest_with_strategy_filter(input))
+        Ok(sg.suggest_with_strategy_filter(input.to_string()))
     }
 }
 
