@@ -34,6 +34,11 @@ mod tests {
     #[test]
     fn check_common_prefix() {
         assert_eq!(
+            longest_common_prefix(make_strings(vec!["aab"])),
+            "aab"
+        );
+
+        assert_eq!(
             longest_common_prefix(make_strings(vec!["aab", "aac", "aah"])),
             "aa"
         );
