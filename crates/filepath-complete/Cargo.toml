@@ -1,5 +1,5 @@
 [package]
-name = "sm-file-select"
+name = "filepath-complete"
 version = "0.1.0"
 edition = "2021"
 
