@@ -16,7 +16,7 @@ pub fn connect_host(config: &ConnectConfig) {
 
     let port = format!("{}", config.port);
     args.push("-p");
-    args.push(port.as_str().clone());
+    args.push(port.as_str());
 
     args.push("-l");
     args.push(&config.user);

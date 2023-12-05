@@ -1,7 +1,9 @@
 use inquire::{
     ui::{Color, RenderConfig, StyleSheet},
     Select, Text,
+    validator::{StringValidator, Validation},
 };
+use filepath_complete::FilePathCompleter;
 
 use crate::config::{AuthMethod, ConnectConfig};
 
@@ -23,7 +25,7 @@ pub fn inquire_config(default: &ConnectConfig) -> ConnectConfig {
 
     let port = Text::new("Port")
         .with_default(&default.port.to_string())
-        .with_validator(&port_validator)
+        .with_validator(PortValidator)
         .with_help_message("port of the target machine")
         .prompt()
         .unwrap()
@@ -48,7 +50,8 @@ pub fn inquire_config(default: &ConnectConfig) -> ConnectConfig {
                 AuthMethod::Pem(s) => s.clone(),
                 _ => "~/.ssh/id_rsa".to_string(),
             };
-            let result = ask("Pem path", &default_path);
+            // let result = ask("Pem path", &default_path);
+            let result = Text::new("Pem path").with_default(&default_path).with_autocomplete(FilePathCompleter::default()).prompt().unwrap();
             AuthMethod::Pem(result)
         }
         "password" => AuthMethod::Passwd,
@@ -65,14 +68,17 @@ pub fn inquire_config(default: &ConnectConfig) -> ConnectConfig {
     };
 }
 
-fn port_validator(input: &str) -> Result<(), String> {
-    return match input.parse::<u32>() {
-        Ok(0..=65535) => Ok(()),
-        Ok(_) => Err("consider using port number between 0 to 65535".to_string()),
-        Err(_) => Err("invalid input, please provide a number between 0 and 65535.".to_string()),
-    };
+#[derive(Clone)]
+struct PortValidator;
+impl StringValidator for PortValidator {
+    fn validate(&self, input: &str) -> Result<inquire::validator::Validation, inquire::CustomUserError> {
+        return match input.parse::<u32>() {
+            Ok(0..=65535) => Ok(Validation::Valid),
+            Ok(_) => Ok(Validation::Invalid("consider using port number between 0 to 65535".into())),
+            Err(_) => Ok(Validation::Invalid("invalid input, please provide a number between 0 and 65535.".into())),
+        };
+    }
 }
-
 fn get_render_config() -> RenderConfig {
     let mut render_config = RenderConfig::default();
     render_config.default_value = StyleSheet::new().with_fg(Color::DarkGrey);
