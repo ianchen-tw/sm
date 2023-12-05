@@ -1,0 +1,9 @@
+[[connections]]
+name = "test-server"
+desc = "openssh-server for testing"
+user = "ian"
+server_addr = "localhost"
+port = 2222
+
+[connections.auth_method]
+type = "Passwd"
