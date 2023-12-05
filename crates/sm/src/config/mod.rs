@@ -11,17 +11,9 @@ pub use auth::AuthMethod;
 pub use connect::ConnectConfig;
 pub use file::{FileUtil, PATH_CONFIG, PATH_CONFIG_BAK};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct SMConfig {
     pub connections: Vec<ConnectConfig>,
-}
-
-impl Default for SMConfig {
-    fn default() -> Self {
-        SMConfig {
-            connections: vec![],
-        }
-    }
 }
 
 impl SMConfig {
@@ -52,7 +44,7 @@ impl SMConfig {
             Ok(m) => m,
             Err(err) => return Err(format!("Cannot parse config - {}", err)),
         };
-        return Ok(t);
+        Ok(t)
     }
 
     /// Return the index of connect config selected
@@ -66,7 +58,7 @@ impl SMConfig {
         return self
             .connections
             .iter()
-            .position(|config| &result == &config.name)
+            .position(|config| result == config.name)
             .unwrap();
     }
 }

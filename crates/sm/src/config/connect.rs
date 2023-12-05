@@ -36,19 +36,15 @@ impl ConnectConfig {
         add_row(&mut t, "Login User", &self.user);
 
         if let AuthMethod::Pem(path) = &self.auth_method {
-            add_row(&mut t, "Authentication (pem)", &path);
+            add_row(&mut t, "Authentication (pem)", path);
         } else {
-            add_row(
-                &mut t,
-                "Authentication",
-                &self.auth_method.name().to_string(),
-            );
+            add_row(&mut t, "Authentication", self.auth_method.name());
         }
 
         println!("{t}");
     }
 }
 
-fn add_row(t: &mut Table, field: &str, val: &String) {
-    t.add_row(vec![field, val.as_str()]);
+fn add_row(t: &mut Table, field: &str, val: &str) {
+    t.add_row(vec![field, val]);
 }

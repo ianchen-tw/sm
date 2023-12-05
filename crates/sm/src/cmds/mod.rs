@@ -13,5 +13,5 @@ pub fn do_connect_subcmd(sm_config: SMConfig) {
     println!("Connect to host:");
     let index = sm_config.select();
     let target = &sm_config.connections[index];
-    connect::connect_host(&target);
+    connect::connect_host(target);
 }

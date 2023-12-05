@@ -1,20 +1,23 @@
+use filepath_complete::FilePathCompleter;
 use inquire::{
     ui::{Color, RenderConfig, StyleSheet},
-    Select, Text,
     validator::{StringValidator, Validation},
+    Select, Text,
 };
-use filepath_complete::FilePathCompleter;
 
 use crate::config::{AuthMethod, ConnectConfig};
 
 pub fn init() {
-    inquire::set_global_render_config(get_render_config());
+    inquire::set_global_render_config(RenderConfig {
+        default_value: StyleSheet::new().with_fg(Color::DarkGrey),
+        ..Default::default()
+    });
 }
 
 pub fn inquire_config(default: &ConnectConfig) -> ConnectConfig {
     fn ask(prompt: &str, default: &str) -> String {
         let answer = Text::new(prompt).with_default(default).prompt().unwrap();
-        return answer;
+        answer
     }
 
     let name = ask("Connection name", &default.name);
@@ -51,37 +54,42 @@ pub fn inquire_config(default: &ConnectConfig) -> ConnectConfig {
                 _ => "~/.ssh/id_rsa".to_string(),
             };
             // let result = ask("Pem path", &default_path);
-            let result = Text::new("Pem path").with_default(&default_path).with_autocomplete(FilePathCompleter::default()).prompt().unwrap();
+            let result = Text::new("Pem path")
+                .with_default(&default_path)
+                .with_autocomplete(FilePathCompleter::default())
+                .prompt()
+                .unwrap();
             AuthMethod::Pem(result)
         }
         "password" => AuthMethod::Passwd,
         _ => unreachable!(),
     };
 
-    return ConnectConfig {
-        name: name,
-        desc: desc,
-        user: user,
-        server_addr: server_addr,
-        port: port,
+    ConnectConfig {
+        name,
+        desc,
+        user,
+        server_addr,
+        port,
         auth_method: auth,
-    };
+    }
 }
 
 #[derive(Clone)]
 struct PortValidator;
 impl StringValidator for PortValidator {
-    fn validate(&self, input: &str) -> Result<inquire::validator::Validation, inquire::CustomUserError> {
-        return match input.parse::<u32>() {
+    fn validate(
+        &self,
+        input: &str,
+    ) -> Result<inquire::validator::Validation, inquire::CustomUserError> {
+        match input.parse::<u32>() {
             Ok(0..=65535) => Ok(Validation::Valid),
-            Ok(_) => Ok(Validation::Invalid("consider using port number between 0 to 65535".into())),
-            Err(_) => Ok(Validation::Invalid("invalid input, please provide a number between 0 and 65535.".into())),
-        };
+            Ok(_) => Ok(Validation::Invalid(
+                "consider using port number between 0 to 65535".into(),
+            )),
+            Err(_) => Ok(Validation::Invalid(
+                "invalid input, please provide a number between 0 and 65535.".into(),
+            )),
+        }
     }
-}
-fn get_render_config() -> RenderConfig {
-    let mut render_config = RenderConfig::default();
-    render_config.default_value = StyleSheet::new().with_fg(Color::DarkGrey);
-
-    render_config
 }

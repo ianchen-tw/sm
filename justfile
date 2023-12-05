@@ -4,5 +4,6 @@ help:
 
 # Format code
 fmt:
-    cargo clippy --fix --allow-staged --bin sm-file-select
+    cargo fmt
+    cargo clippy --fix --allow-staged --allow-dirty
 

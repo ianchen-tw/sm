@@ -42,7 +42,7 @@ impl ConfigSubCmd {
                 sm_config.save_config();
             }
             ConfigSubCmd::Edit(mut sm_config) => {
-                if sm_config.connections.len() == 0 {
+                if sm_config.connections.is_empty() {
                     info!("No config exists, create one before editing");
                     std::process::exit(0)
                 }
@@ -53,7 +53,7 @@ impl ConfigSubCmd {
                 sm_config.save_config();
             }
             ConfigSubCmd::Show(sm_config) => {
-                if sm_config.connections.len() == 0 {
+                if sm_config.connections.is_empty() {
                     info!("No config exists");
                     std::process::exit(0)
                 }

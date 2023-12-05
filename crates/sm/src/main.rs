@@ -59,7 +59,7 @@ impl Default for RunOpts {
 impl RunOpts {
     fn set_debug_level(&mut self, level: LevelFilter) -> &Self {
         self.log_level = level;
-        return self;
+        self
     }
 }
 
@@ -125,7 +125,7 @@ fn parse_args(args: Args) -> Result<RunOpts, String> {
         return Err(format!("Bad home folder: {} -- {}", dir.display(), err));
     }
     debug!("Switch home to: {}", dir.display());
-    return Ok(run_opts);
+    Ok(run_opts)
 }
 
 fn init_logger(level: LevelFilter) {

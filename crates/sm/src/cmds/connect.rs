@@ -11,7 +11,7 @@ pub fn connect_host(config: &ConnectConfig) {
 
     if let AuthMethod::Pem(location) = &config.auth_method {
         args.push("-i");
-        args.push(&location.as_str())
+        args.push(location.as_str())
     }
 
     let port = format!("{}", config.port);
@@ -21,7 +21,7 @@ pub fn connect_host(config: &ConnectConfig) {
     args.push("-l");
     args.push(&config.user);
 
-    args.push(&config.server_addr.as_str());
+    args.push(config.server_addr.as_str());
 
     let mut sp = process::Command::new("ssh")
         .args(args)
