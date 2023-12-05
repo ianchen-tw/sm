@@ -38,31 +38,36 @@ impl Autocomplete for FilePathCompleter {
         highlighted_suggestion: Option<String>,
     ) -> Result<Replacement, CustomUserError> {
         debug!(
-            "get_completion start input={:#?}, hilighted={:#?}",
+            "Start Completion input={:#?}, highlighted={:#?}",
             input, highlighted_suggestion
         );
 
         if let Some(suggestion) = highlighted_suggestion {
             let result = suggestion
-                .strip_prefix(&self.sg.current_path().to_string_lossy().to_string())
+                .strip_prefix(&format!("{}/", get_home()))
                 .unwrap();
+            debug!("Complete input `{}`-> `{}`", input, result);
             return Ok(Replacement::Some(result.to_string()));
         }
 
-        // No selected item, replace current input with common prefix of all candidates
+        debug!("No selected item, replace with common prefix of all candidates");
         let prefix =
             lcp::longest_common_prefix(self.sg.suggest_with_strategy_filter(input.to_string()));
+        if prefix.is_empty() {
+            return Ok(Replacement::None);
+        }
+
         let result = prefix
-            .strip_prefix(&self.sg.current_path().to_string_lossy().to_string())
+            .strip_prefix(&format!("{}/", get_home()))
             .unwrap()
             .to_string();
-
+        debug!("Complete input `{}`-> `{}`", input, result);
         Ok(Replacement::Some(result))
     }
 
     fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, CustomUserError> {
-        debug!("get_suggestions start, input={:#?}", input);
-        let sg = FileSuggest::new(&get_home(), input);
-        Ok(sg.suggest_with_strategy_filter(input.to_string()))
+        debug!("Start suggest, input={:#?}", input);
+        self.sg = FileSuggest::new(&get_home(), input);
+        Ok(self.sg.suggest_with_strategy_filter(input.to_string()))
     }
 }

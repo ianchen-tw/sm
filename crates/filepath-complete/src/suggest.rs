@@ -1,4 +1,4 @@
-use log::debug;
+use log::{debug, trace};
 use std::{
     path::{Component, Path, PathBuf},
     vec,
@@ -58,31 +58,49 @@ impl FileSuggest {
 
     fn list_all_nodes(&self) -> Vec<String> {
         // println!("Listing files in path: {}", &self.get_path().display());
-        if let Ok(mut result) = self.lister.list_entries(&self.current_path()) {
+        let result = if let Ok(mut result) = self.lister.list_entries(&self.current_path()) {
             result.sort();
             result
         } else {
             vec![]
-        }
+        };
+        trace!(
+            "list -all= {:#?}...(omitted)",
+            result
+                .iter()
+                .take(5)
+                .map(|v| v.to_string())
+                .collect::<Vec<String>>()
+        );
+        result
     }
 
     pub fn suggest_with_strategy_filter(&self, input: String) -> Vec<String> {
         // input_actual.push(input);
         debug!(
-            "suggest_with_strategy_filter, root={:#?}, input={:#?}",
+            "list -with-filter, root={:#?}, input={:#?}",
             self.root.display(),
             input
         );
 
         let to_match: PathBuf = extend_path(self.root.as_path(), Path::new(&input));
+        let to_match = to_match.to_string_lossy().to_string();
 
         let mut result = vec![];
         for filename in self.list_all_nodes() {
-            if filename.starts_with(&to_match.to_string_lossy().to_string()) {
+            if filename.starts_with(&to_match) {
                 result.push(filename);
             }
         }
         result.sort();
+        trace!(
+            "all filtered={:#?}...(omitted)",
+            result
+                .iter()
+                .take(5)
+                .map(|v| v.to_string())
+                .collect::<Vec<String>>()
+        );
         result
     }
 
