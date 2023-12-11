@@ -14,18 +14,35 @@ pub struct ConnectConfig {
 
 impl Default for ConnectConfig {
     fn default() -> Self {
-        ConnectConfig {
-            name: "ian".to_string(),
-            desc: "desc".to_string(),
-            user: "yac".to_string(),
-            server_addr: "192.168.1.1".to_string(),
-            port: 22,
-            auth_method: AuthMethod::default(),
-        }
+        ConnectConfig::new(
+            "ian",
+            "desc",
+            "yac",
+            "192.168.1.1",
+            22,
+            AuthMethod::default(),
+        )
     }
 }
 
 impl ConnectConfig {
+    pub fn new(
+        name: impl Into<String>,
+        desc: impl Into<String>,
+        user: impl Into<String>,
+        server_addr: impl Into<String>,
+        port: u32,
+        auth_method: AuthMethod,
+    ) -> Self {
+        ConnectConfig {
+            name: name.into(),
+            desc: desc.into(),
+            user: user.into(),
+            server_addr: server_addr.into(),
+            port,
+            auth_method,
+        }
+    }
     pub fn show(&self) {
         let mut t = Table::new();
         t.set_header(vec!["Field", "Value"]);

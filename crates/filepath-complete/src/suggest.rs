@@ -75,7 +75,7 @@ impl FileSuggest {
         result
     }
 
-    pub fn suggest_with_strategy_filter(&self, input: String) -> Vec<String> {
+    pub fn suggest_with_strategy_filter(&self, input: &str) -> Vec<String> {
         // input_actual.push(input);
         debug!(
             "list -with-filter, root={:#?}, input={:#?}",
@@ -83,7 +83,7 @@ impl FileSuggest {
             input
         );
 
-        let to_match: PathBuf = extend_path(self.root.as_path(), Path::new(&input));
+        let to_match: PathBuf = extend_path(self.root.as_path(), Path::new(input));
         let to_match = to_match.to_string_lossy().to_string();
 
         let mut result = vec![];

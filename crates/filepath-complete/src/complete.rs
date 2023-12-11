@@ -51,8 +51,7 @@ impl Autocomplete for FilePathCompleter {
         }
 
         debug!("No selected item, replace with common prefix of all candidates");
-        let prefix =
-            lcp::longest_common_prefix(self.sg.suggest_with_strategy_filter(input.to_string()));
+        let prefix = lcp::longest_common_prefix(self.sg.suggest_with_strategy_filter(input));
         if prefix.is_empty() {
             return Ok(Replacement::None);
         }
@@ -68,6 +67,6 @@ impl Autocomplete for FilePathCompleter {
     fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, CustomUserError> {
         debug!("Start suggest, input={:#?}", input);
         self.sg = FileSuggest::new(&get_home(), input);
-        Ok(self.sg.suggest_with_strategy_filter(input.to_string()))
+        Ok(self.sg.suggest_with_strategy_filter(input))
     }
 }

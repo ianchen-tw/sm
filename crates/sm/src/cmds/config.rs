@@ -28,14 +28,14 @@ impl ConfigSubCmd {
     pub fn run(self) {
         match self {
             ConfigSubCmd::Create(mut sm_config) => {
-                let default = ConnectConfig {
-                    name: "my custom connection".to_string(),
-                    desc: "my custom description".to_string(),
-                    user: "root".to_string(),
-                    server_addr: "192.168.1.1".to_string(),
-                    port: 22,
-                    auth_method: AuthMethod::default(),
-                };
+                let default = ConnectConfig::new(
+                    "my custom connection",
+                    "my custom description",
+                    "root",
+                    "192.168.1.1",
+                    22,
+                    AuthMethod::default(),
+                );
                 let result = ask::inquire_config(&default);
                 result.show();
                 sm_config.connections.push(result);
