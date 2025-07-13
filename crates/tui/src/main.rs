@@ -5,7 +5,6 @@ use crossterm::{
 };
 use fuzzy_matcher::clangd::ClangdMatcher;
 use fuzzy_matcher::FuzzyMatcher;
-use rand::Rng;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
@@ -15,35 +14,59 @@ use ratatui::{
     Terminal,
 };
 use std::io;
+use std::time::Duration;
 
 mod ping;
-use ping::{get_ping_info_for_latency, get_ping_legend, PingInfo};
+mod ping_service;
+use ping::{get_ping_info_for_latency, get_ping_legend, get_ping_failure_info, PingInfo};
+use ping_service::PingManager;
 
 #[derive(Clone)]
 struct ServerInfo {
     name: String,
-    latency: u32,
 }
 
 
 
 impl ServerInfo {
-    fn display_name(&self) -> String {
-        let ping_info = self.get_ping_info();
-        format!("{} {} {}", self.name, ping_info.emoji, ping_info.format_with_latency(self.latency))
+    fn display_name(&self, latency: Option<u32>) -> String {
+        match latency {
+            Some(lat) => {
+                let ping_info = get_ping_info_for_latency(lat);
+                format!("{} {} ({})", ping_info.emoji, self.name, ping_info.format_with_latency(lat))
+            }
+            None => {
+                let ping_info = get_ping_failure_info();
+                format!("{} {} ({})", ping_info.emoji, self.name, ping_info.description)
+            }
+        }
     }
     
-    fn get_ping_info(&self) -> PingInfo {
-        get_ping_info_for_latency(self.latency)
+    fn get_ping_info(&self, latency: Option<u32>) -> PingInfo {
+        match latency {
+            Some(lat) => get_ping_info_for_latency(lat),
+            None => get_ping_failure_info(),
+        }
     }
     
-    fn get_ping_indicator(&self) -> (&str, String) {
-        let ping_info = self.get_ping_info();
-        (ping_info.emoji, ping_info.format_with_latency(self.latency))
+    fn get_ping_indicator(&self, latency: Option<u32>) -> (&str, String) {
+        match latency {
+            Some(lat) => {
+                let ping_info = get_ping_info_for_latency(lat);
+                (ping_info.emoji, ping_info.format_with_latency(lat))
+            }
+            None => {
+                let ping_info = get_ping_failure_info();
+                (ping_info.emoji, ping_info.description.to_string())
+            }
+        }
     }
     
-    fn get_ping_color(&self) -> Color {
-        self.get_ping_info().color
+    fn get_ping_color(&self, latency: Option<u32>) -> Color {
+        match latency {
+            Some(lat) => get_ping_info_for_latency(lat).color,
+            None => get_ping_failure_info().color,
+        }
     }
 }
 
@@ -56,10 +79,11 @@ struct App {
     should_quit: bool,
     input: String,
     matcher: ClangdMatcher,
+    ping_manager: PingManager,
 }
 
 impl App {
-    fn new() -> App {
+    fn new() -> (App, tokio::task::JoinHandle<()>) {
         let server_names = vec![
             "Production Server 1",
             "Production Server 2", 
@@ -71,17 +95,19 @@ impl App {
             "Cache Server",
         ];
 
-        let mut rng = rand::thread_rng();
         let servers: Vec<ServerInfo> = server_names
-            .into_iter()
+            .iter()
             .map(|name| ServerInfo {
                 name: name.to_string(),
-                latency: rng.gen_range(10..=500), // Random latency between 10ms and 500ms
             })
             .collect();
 
         let mut list_state = ListState::default();
         list_state.select(Some(0));
+
+        // Create ping manager and start monitoring
+        let server_names_string: Vec<String> = server_names.iter().map(|s| s.to_string()).collect();
+        let (ping_manager, ping_handle) = PingManager::new(server_names_string);
 
         let mut app = App {
             filtered_servers: servers.clone(),
@@ -92,10 +118,11 @@ impl App {
             should_quit: false,
             input: String::new(),
             matcher: ClangdMatcher::default(),
+            ping_manager,
         };
         
         app.update_filtered_servers();
-        app
+        (app, ping_handle)
     }
 
     fn next(&mut self) {
@@ -197,10 +224,13 @@ impl App {
         self.update_filtered_servers();
     }
 
-
+    fn update_ping_latencies(&mut self) {
+        self.ping_manager.update_latencies();
+    }
 }
 
-fn main() -> Result<(), io::Error> {
+#[tokio::main]
+async fn main() -> Result<(), io::Error> {
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -209,8 +239,8 @@ fn main() -> Result<(), io::Error> {
     let mut terminal = Terminal::new(backend)?;
 
     // Create app and run it
-    let mut app = App::new();
-    let res = run_app(&mut terminal, &mut app);
+    let (mut app, _ping_handle) = App::new();
+    let res = run_app(&mut terminal, &mut app).await;
 
     // Restore terminal
     disable_raw_mode()?;
@@ -230,35 +260,42 @@ fn main() -> Result<(), io::Error> {
     Ok(())
 }
 
-fn run_app<B: ratatui::backend::Backend>(
+async fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
 ) -> io::Result<()> {
     loop {
+        // Update ping latencies
+        app.update_ping_latencies();
+        
         terminal.draw(|f| ui(f, app))?;
 
         if app.should_quit {
             return Ok(());
         }
 
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press {
-                match key.code {
-                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        return Ok(());
+        // Check for events with a timeout for periodic updates
+        if event::poll(Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press {
+                    match key.code {
+                        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            return Ok(());
+                        }
+                        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            app.clear_input();
+                        }
+                        KeyCode::Down => app.next(),
+                        KeyCode::Up => app.previous(),
+                        KeyCode::Enter => app.select_server(),
+                        KeyCode::Char(c) => app.add_char(c),
+                        KeyCode::Backspace => app.delete_char(),
+                        _ => {}
                     }
-                    KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        app.clear_input();
-                    }
-                    KeyCode::Down => app.next(),
-                    KeyCode::Up => app.previous(),
-                    KeyCode::Enter => app.select_server(),
-                    KeyCode::Char(c) => app.add_char(c),
-                    KeyCode::Backspace => app.delete_char(),
-                    _ => {}
                 }
             }
         }
+        // If no events or timeout occurred, continue loop to update ping latencies
     }
 }
 
@@ -311,8 +348,9 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
         .iter()
         .enumerate()
         .map(|(i, server)| {
-            let (ping_emoji, ping_text) = server.get_ping_indicator();
-            let ping_color = server.get_ping_color();
+            let latency = app.ping_manager.get_latency(&server.name);
+            let display_text = server.display_name(latency);
+            let ping_color = server.get_ping_color(latency);
             
             let content = if i == app.selected_index {
                 Line::from(vec![
@@ -321,20 +359,8 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
                         Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(
-                        &server.name,
+                        display_text,
                         Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
-                    ),
-                    Span::styled(
-                        " ",
-                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
-                    ),
-                    Span::styled(
-                        ping_emoji,
-                        Style::default().fg(ping_color).add_modifier(Modifier::BOLD),
-                    ),
-                    Span::styled(
-                        format!(" {}", ping_text),
-                        Style::default().fg(ping_color).add_modifier(Modifier::BOLD),
                     ),
                 ])
             } else {
@@ -344,20 +370,8 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
                         Style::default().fg(Color::White),
                     ),
                     Span::styled(
-                        &server.name,
+                        display_text,
                         Style::default().fg(Color::White),
-                    ),
-                    Span::styled(
-                        " ",
-                        Style::default().fg(Color::White),
-                    ),
-                    Span::styled(
-                        ping_emoji,
-                        Style::default().fg(ping_color),
-                    ),
-                    Span::styled(
-                        format!(" {}", ping_text),
-                        Style::default().fg(ping_color),
                     ),
                 ])
             };

@@ -7,4 +7,5 @@ edition = "2024"
 ratatui = "0.29.0"
 crossterm = "0.28.1"
 fuzzy-matcher = "0.3.7"
-rand = "0.8.5"
+rand = { version =  "0.8.5", features = ["small_rng"]}
+tokio = { version = "1.0", features = ["full"] }
