@@ -42,7 +42,7 @@ impl SMConfig {
     pub fn parse(s: &str) -> Result<Self, String> {
         let t = match toml::from_str::<SMConfig>(s) {
             Ok(m) => m,
-            Err(err) => return Err(format!("Cannot parse config - {}", err)),
+            Err(err) => return Err(format!("Cannot parse config - {err}")),
         };
         Ok(t)
     }
@@ -55,10 +55,10 @@ impl SMConfig {
             .map(|c| String::from(&c.name))
             .collect();
         let result = Select::new("Select a connection", names).prompt().unwrap();
-        return self
+        self
             .connections
             .iter()
             .position(|config| result == config.name)
-            .unwrap();
+            .unwrap()
     }
 }

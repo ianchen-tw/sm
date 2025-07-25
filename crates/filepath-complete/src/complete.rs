@@ -38,15 +38,14 @@ impl Autocomplete for FilePathCompleter {
         highlighted_suggestion: Option<String>,
     ) -> Result<Replacement, CustomUserError> {
         debug!(
-            "Start Completion input={:#?}, highlighted={:#?}",
-            input, highlighted_suggestion
+            "Start Completion input={input:#?}, highlighted={highlighted_suggestion:#?}"
         );
 
         if let Some(suggestion) = highlighted_suggestion {
             let result = suggestion
                 .strip_prefix(&format!("{}/", get_home()))
                 .unwrap();
-            debug!("Complete input `{}`-> `{}`", input, result);
+            debug!("Complete input `{input}`-> `{result}`");
             return Ok(Replacement::Some(result.to_string()));
         }
 
@@ -60,12 +59,12 @@ impl Autocomplete for FilePathCompleter {
             .strip_prefix(&format!("{}/", get_home()))
             .unwrap()
             .to_string();
-        debug!("Complete input `{}`-> `{}`", input, result);
+        debug!("Complete input `{input}`-> `{result}`");
         Ok(Replacement::Some(result))
     }
 
     fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, CustomUserError> {
-        debug!("Start suggest, input={:#?}", input);
+        debug!("Start suggest, input={input:#?}");
         self.sg = FileSuggest::new(&get_home(), input);
         Ok(self.sg.suggest_with_strategy_filter(input))
     }

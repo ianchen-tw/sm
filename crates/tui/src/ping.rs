@@ -9,7 +9,7 @@ pub struct PingInfo {
 
 impl PingInfo {
     pub fn format_with_latency(&self, latency: u32) -> String {
-        format!("{}ms", latency)
+        format!("{latency}ms")
     }
 }
 
@@ -51,4 +51,4 @@ pub fn get_ping_failure_info() -> PingInfo {
         color: Color::Red,
         description: "Failed",
     }
-} 
+}

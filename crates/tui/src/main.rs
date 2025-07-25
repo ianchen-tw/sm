@@ -1,24 +1,29 @@
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers,
+    },
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use fuzzy_matcher::clangd::ClangdMatcher;
 use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::clangd::ClangdMatcher;
+use log::debug;
 use ratatui::{
+    Terminal,
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap},
-    Terminal,
 };
+use simplelog::{Config, LevelFilter, WriteLogger};
+use std::fs::File;
 use std::io;
 use std::time::Duration;
 
 mod ping;
 mod ping_service;
-use ping::{get_ping_info_for_latency, get_ping_legend, get_ping_failure_info, PingInfo};
+use ping::{PingInfo, get_ping_failure_info, get_ping_info_for_latency, get_ping_legend};
 use ping_service::PingManager;
 
 #[derive(Clone)]
@@ -26,29 +31,35 @@ struct ServerInfo {
     name: String,
 }
 
-
-
 impl ServerInfo {
     fn display_name(&self, latency: Option<u32>) -> String {
         match latency {
             Some(lat) => {
                 let ping_info = get_ping_info_for_latency(lat);
-                format!("{} {} ({})", ping_info.emoji, self.name, ping_info.format_with_latency(lat))
+                format!(
+                    "{} {} ({})",
+                    ping_info.emoji,
+                    self.name,
+                    ping_info.format_with_latency(lat)
+                )
             }
             None => {
                 let ping_info = get_ping_failure_info();
-                format!("{} {} ({})", ping_info.emoji, self.name, ping_info.description)
+                format!(
+                    "{} {} ({})",
+                    ping_info.emoji, self.name, ping_info.description
+                )
             }
         }
     }
-    
+
     fn get_ping_info(&self, latency: Option<u32>) -> PingInfo {
         match latency {
             Some(lat) => get_ping_info_for_latency(lat),
             None => get_ping_failure_info(),
         }
     }
-    
+
     fn get_ping_indicator(&self, latency: Option<u32>) -> (&str, String) {
         match latency {
             Some(lat) => {
@@ -61,7 +72,7 @@ impl ServerInfo {
             }
         }
     }
-    
+
     fn get_ping_color(&self, latency: Option<u32>) -> Color {
         match latency {
             Some(lat) => get_ping_info_for_latency(lat).color,
@@ -84,16 +95,14 @@ struct App {
 
 impl App {
     fn new() -> (App, tokio::task::JoinHandle<()>) {
-        let server_names = vec![
-            "Production Server 1",
-            "Production Server 2", 
+        let server_names = ["Production Server 1",
+            "Production Server 2",
             "Staging Server",
             "Development Server",
             "Test Server",
             "Load Balancer",
             "Database Server",
-            "Cache Server",
-        ];
+            "Cache Server"];
 
         let servers: Vec<ServerInfo> = server_names
             .iter()
@@ -120,7 +129,7 @@ impl App {
             matcher: ClangdMatcher::default(),
             ping_manager,
         };
-        
+
         app.update_filtered_servers();
         (app, ping_handle)
     }
@@ -129,7 +138,7 @@ impl App {
         if self.filtered_servers.is_empty() {
             return;
         }
-        
+
         let i = match self.list_state.selected() {
             Some(i) => {
                 if i >= self.filtered_servers.len() - 1 {
@@ -148,7 +157,7 @@ impl App {
         if self.filtered_servers.is_empty() {
             return;
         }
-        
+
         let i = match self.list_state.selected() {
             Some(i) => {
                 if i == 0 {
@@ -167,7 +176,7 @@ impl App {
         if self.filtered_servers.is_empty() {
             return;
         }
-        
+
         if let Some(selected) = self.list_state.selected() {
             if selected < self.filtered_servers.len() {
                 self.selected_server = Some(self.filtered_servers[selected].name.clone());
@@ -181,7 +190,8 @@ impl App {
             self.filtered_servers = self.servers.clone();
         } else {
             // Use fuzzy matching to find servers
-            let mut matches: Vec<(ServerInfo, i64)> = self.servers
+            let mut matches: Vec<(ServerInfo, i64)> = self
+                .servers
                 .iter()
                 .filter_map(|server| {
                     self.matcher
@@ -189,14 +199,14 @@ impl App {
                         .map(|score| (server.clone(), score))
                 })
                 .collect();
-            
+
             // Sort by score (higher is better)
             matches.sort_by(|a, b| b.1.cmp(&a.1));
-            
+
             // Extract just the server info
             self.filtered_servers = matches.into_iter().map(|(server, _)| server).collect();
         }
-        
+
         // Reset selection to first item when filter changes
         if !self.filtered_servers.is_empty() {
             self.list_state.select(Some(0));
@@ -206,8 +216,6 @@ impl App {
             self.selected_index = 0;
         }
     }
-
-
 
     fn add_char(&mut self, c: char) {
         self.input.push(c);
@@ -231,6 +239,10 @@ impl App {
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
+    // Initialize logging to file (TUI hijacks terminal, so we can't use stdout)
+    init_logger(LevelFilter::Debug);
+    debug!("Starting TUI application");
+
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -252,10 +264,12 @@ async fn main() -> Result<(), io::Error> {
     terminal.show_cursor()?;
 
     if let Err(err) = res {
-        println!("{:?}", err)
+        println!("{err:?}")
     } else if let Some(selected_server) = app.selected_server {
-        println!("Selected server: {}", selected_server);
+        println!("Selected server: {selected_server}");
     }
+
+    println!("Debug logs written to: tui_debug.log");
 
     Ok(())
 }
@@ -267,7 +281,7 @@ async fn run_app<B: ratatui::backend::Backend>(
     loop {
         // Update ping latencies
         app.update_ping_latencies();
-        
+
         terminal.draw(|f| ui(f, app))?;
 
         if app.should_quit {
@@ -324,23 +338,20 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
 
     // Input field
     let input_style = Style::default().fg(Color::Yellow);
-    
+
     let input_block = Block::default()
         .borders(Borders::ALL)
         .title("Fuzzy Search (Type to search, Ctrl+U to clear)")
         .style(input_style);
-    
+
     let input = Paragraph::new(app.input.as_str())
         .style(input_style)
         .block(input_block);
-    
+
     f.render_widget(input, chunks[1]);
-    
+
     // Set cursor position
-    f.set_cursor_position((
-        chunks[1].x + app.input.len() as u16 + 1,
-        chunks[1].y + 1,
-    ));
+    f.set_cursor_position((chunks[1].x + app.input.len() as u16 + 1, chunks[1].y + 1));
 
     // Server list
     let items: Vec<ListItem> = app
@@ -351,28 +362,26 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
             let latency = app.ping_manager.get_latency(&server.name);
             let display_text = server.display_name(latency);
             let ping_color = server.get_ping_color(latency);
-            
+
             let content = if i == app.selected_index {
                 Line::from(vec![
                     Span::styled(
                         "► ",
-                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(
                         display_text,
-                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
                     ),
                 ])
             } else {
                 Line::from(vec![
-                    Span::styled(
-                        "  ",
-                        Style::default().fg(Color::White),
-                    ),
-                    Span::styled(
-                        display_text,
-                        Style::default().fg(Color::White),
-                    ),
+                    Span::styled("  ", Style::default().fg(Color::White)),
+                    Span::styled(display_text, Style::default().fg(Color::White)),
                 ])
             };
             ListItem::new(content)
@@ -402,10 +411,9 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
     // Instructions
     let ping_legend = get_ping_legend();
     let instructions = format!(
-        "↑/↓: Navigate | Enter: Select | Type: Fuzzy Search | Ctrl+U: Clear | Ctrl+C: Quit\n{}",
-        ping_legend
+        "↑/↓: Navigate | Enter: Select | Type: Fuzzy Search | Ctrl+U: Clear | Ctrl+C: Quit\n{ping_legend}"
     );
-    
+
     let instructions_widget = Paragraph::new(instructions)
         .style(Style::default().fg(Color::Gray))
         .alignment(Alignment::Center)
@@ -416,8 +424,9 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
                 .style(Style::default().fg(Color::White)),
         );
     f.render_widget(instructions_widget, chunks[3]);
-
-
 }
 
-
+fn init_logger(level: LevelFilter) {
+    let log_file = File::create("tui_debug.log").expect("Unable to create log file");
+    WriteLogger::init(level, Config::default(), log_file).expect("Unable to initialize logger");
+}
