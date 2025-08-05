@@ -20,7 +20,7 @@ fn main() {
     init_logger(LevelFilter::Trace);
     println!("Pick a file:");
     let home_folder = home_dir().unwrap().to_str().unwrap().to_string();
-    let ans = Text::new(&format!("Path Selected: {}/", home_folder))
+    let ans = Text::new(&format!("Path Selected: {home_folder}/"))
         .with_autocomplete(FilePathCompleter::default())
         .with_help_message("...")
         .prompt();

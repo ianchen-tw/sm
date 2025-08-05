@@ -71,7 +71,7 @@ fn main() {
     let run_opts: RunOpts = match parse_args(args) {
         Ok(opts) => opts,
         Err(err) => {
-            eprintln!("{}", err);
+            eprintln!("{err}");
             std::process::exit(255);
         }
     };
@@ -92,7 +92,7 @@ fn main() {
         SMConfig::parse(fs::read_to_string(file_path).unwrap().as_str()).unwrap()
     };
 
-    debug!("Load config !, {:?}", sm_config);
+    debug!("Load config !, {sm_config:?}");
 
     match run_opts.run_command {
         Command::CmdConfig => {
